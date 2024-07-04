@@ -1,4 +1,5 @@
 labels
 features
 models
+pretraining_data
 __pycache__
