@@ -7,6 +7,7 @@ import os
 import pickle
 import meds
 import pathlib
+import torch
 
 def main():
     with meds_reader.PatientDatabase(config.database_path, num_threads=6) as database:
@@ -22,7 +23,7 @@ def main():
             labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label).to_pylist()
 
             features = femr.models.transformer.compute_features(
-                db=database, model_path='motor_model', labels=labels, ontology=ontology)
+                db=database, model_path='motor_model', labels=labels, ontology=ontology, device=torch.device('cuda'), tokens_per_batch = 32 * 1024, num_proc=6)
 
             with open(os.path.join('features', label_name + '_motor.pkl'), 'wb') as f:
                 pickle.dump(features, f)

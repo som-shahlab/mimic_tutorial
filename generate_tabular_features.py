@@ -13,13 +13,10 @@ import pickle
 import config
 
 def main():
-    if os.path.exists('features'):
-        shutil.rmtree('features')
+    if not os.path.exists('features'):
+        os.mkdir('features')
 
-
-    os.mkdir('features')
-
-    with meds_reader.PatientDatabase(config.database_path, num_threads=6) as database:
+    with meds_reader.PatientDatabase(config.database_path, num_threads=32) as database:
         for label_name in config.label_names:
             labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label).to_pylist()
 

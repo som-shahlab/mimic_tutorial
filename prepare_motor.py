@@ -12,7 +12,7 @@ def main():
     pretraining_data = pathlib.Path('pretraining_data')
 
 
-    with meds_reader.PatientDatabase(config.database_path, num_threads=6) as database:
+    with meds_reader.PatientDatabase(config.database_path, num_threads=32) as database:
         ontology_path = pretraining_data / 'ontology.pkl'
         if not ontology_path.exists():
             print("Creating ontology")
@@ -42,9 +42,10 @@ def main():
 
         tokenizer_path = pretraining_data / 'tokenizer'
         if not tokenizer_path.exists():
+            print("Train tokenizer")
                 # NOTE: A vocab size of 128 is probably too low for a real model. 128 was chosen to make this tutorial quick to run
             tokenizer = femr.models.tokenizer.train_tokenizer(
-                main_database, vocab_size=1024 * 8, is_hierarchical=True, ontology=ontology)
+                main_database, vocab_size=1024 * 16, is_hierarchical=True, ontology=ontology)
 
             # Save the tokenizer to the same directory as the model
             tokenizer.save_pretrained(tokenizer_path)
@@ -56,9 +57,10 @@ def main():
 
         if not task_path.exists():
             # Second, we need to prefit the MOTOR model. This is necessary because piecewise exponential models are unstable without an initial fit
+            print("Train MOTOR task")
 
             motor_task = femr.models.tasks.MOTORTask.fit_pretraining_task_info(
-                main_database, tokenizer, num_tasks=4 * 1024, num_bins=8, final_layer_size=256)
+                main_database, tokenizer, num_tasks=8 * 1024, num_bins=8, final_layer_size=512)
             
             with open(task_path, 'wb') as f:
                 pickle.dump(motor_task, f)
@@ -82,7 +84,7 @@ def main():
         if not train_batches_path.exists():
             print("Convert batches")
             # But generally we want to convert entire datasets
-            train_batches = processor.convert_dataset(train_database, tokens_per_batch=32, num_proc=4)
+            train_batches = processor.convert_dataset(train_database, tokens_per_batch=16 * 1024, num_proc=32)
 
             print("Convert batches to pytorch")
             # Convert our batches to pytorch tensors
@@ -92,7 +94,8 @@ def main():
         val_batches_path = pretraining_data / 'val_batches'
 
         if not val_batches_path.exists():
-            val_batches = processor.convert_dataset(val_database, tokens_per_batch=32, num_proc=4)
+            print("Convert val batches")
+            val_batches = processor.convert_dataset(val_database, tokens_per_batch=16 * 1024, num_proc=32)
             # Convert our batches to pytorch tensors
             val_batches.set_format("pt")
             val_batches.save_to_disk(val_batches_path)

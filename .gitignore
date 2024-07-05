@@ -1,4 +1,7 @@
 labels
+cache_dir
+tmp_trainer*
+motor_model
 features
 models
 pretraining_data

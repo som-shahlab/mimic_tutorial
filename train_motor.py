@@ -1,5 +1,7 @@
 import transformers
 import pathlib
+import torch
+import sys
 import femr.models.transformer
 import pickle
 import datasets
@@ -29,6 +31,7 @@ def main():
 
     val_batches_path = pretraining_data / 'val_batches'
     val_batches = datasets.Dataset.load_from_disk(val_batches_path)
+    val_batches = val_batches.select(range(120))
 
     # Finally, given the batches, we can train CLMBR.
     # We can use huggingface's trainer to do this.
@@ -36,33 +39,50 @@ def main():
     transformer_config = femr.models.config.FEMRTransformerConfig(
         vocab_size=tokenizer.vocab_size, 
         is_hierarchical=tokenizer.is_hierarchical, 
-        n_layers=2,
-        hidden_size=64, 
-        intermediate_size=64*2,
-        n_heads=8,
+        n_layers=6,
+        use_normed_ages=True,
+        use_bias=False,
+        hidden_act='swiglu',
     )
 
     config = femr.models.config.FEMRModelConfig.from_transformer_task_configs(transformer_config, motor_task.get_task_config())
 
     model = femr.models.transformer.FEMRModel(config)
+    model = model.to(torch.device("cuda"))
 
     collator = processor.collate
+    learning_rate = float(sys.argv[1])
 
     trainer_config = transformers.TrainingArguments(
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
 
-        output_dir='tmp_trainer',
+        learning_rate=learning_rate,
+        output_dir='tmp_trainer_' + sys.argv[1],
         remove_unused_columns=False,
+        bf16=True,
+
+        weight_decay=0.1,
+        adam_beta2=0.95,
+        
+        report_to="tensorboard",
+
         num_train_epochs=100,
 
-        eval_steps=20,
-        evaluation_strategy="steps",
+        warmup_steps=500,
 
-        logging_steps=20,
         logging_strategy='steps',
+        logging_steps=500,
+        disable_tqdm=True,
+
+        evaluation_strategy='steps',
+        eval_steps=500,
 
         prediction_loss_only=True,
+        dataloader_num_workers=12,
+
+        save_total_limit=1,
+        load_best_model_at_end=True,
     )
 
     trainer = transformers.Trainer(
@@ -74,10 +94,5 @@ def main():
     )
 
     trainer.train()
-
-    model.save_pretrained('motor_model')
-    tokenizer.save_pretrained('motor_model')
-
-
 if __name__ == "__main__":
     main()
