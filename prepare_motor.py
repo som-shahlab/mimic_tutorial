@@ -43,7 +43,6 @@ def main():
         tokenizer_path = pretraining_data / 'tokenizer'
         if not tokenizer_path.exists():
             print("Train tokenizer")
-                # NOTE: A vocab size of 128 is probably too low for a real model. 128 was chosen to make this tutorial quick to run
             tokenizer = femr.models.tokenizer.train_tokenizer(
                 main_database, vocab_size=1024 * 16, is_hierarchical=True, ontology=ontology)
 
