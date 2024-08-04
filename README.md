@@ -73,6 +73,7 @@ This code currently uses a branch of FEMR, mimic_tutorial, in order to function.
 
 ```bash
 git clone https://github.com/som-shahlab/femr
+cd femr
 git checkout mimic_tutorial
 pip install -e .
 pip install xformers
