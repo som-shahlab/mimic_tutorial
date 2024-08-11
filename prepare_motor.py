@@ -7,6 +7,7 @@ import femr.splits
 import femr.models.tokenizer
 import femr.models.tasks
 import femr.models.processor
+import os
 
 def main():
     pretraining_data = pathlib.Path('pretraining_data')
@@ -16,7 +17,7 @@ def main():
         ontology_path = pretraining_data / 'ontology.pkl'
         if not ontology_path.exists():
             print("Creating ontology")
-            ontology = femr.ontology.Ontology(config.athena_path, code_metadata=database.metadata['code_metadata'])
+            ontology = femr.ontology.Ontology(config.athena_path, code_metadata_path=os.path.join(database.path_to_database, 'metadata', 'codes.parquet'))
             print("Pruning the ontology")
             ontology.prune_to_dataset(
                 database,

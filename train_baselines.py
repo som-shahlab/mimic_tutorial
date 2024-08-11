@@ -11,7 +11,7 @@ import femr.featurizers
 import pyarrow.csv as pacsv
 import meds
 import pickle
-from config import label_names
+from config import label_names, num_threads, database_path
 import numpy as np
 import sklearn.linear_model
 import optuna
@@ -59,9 +59,9 @@ def main():
 
     os.mkdir('models')
 
-    with meds_reader.PatientDatabase("../mimic-iv-demo-meds-reader", num_threads=6) as database:
+    with meds_reader.PatientDatabase(database_path, num_threads=num_threads) as database:
         for label_name in label_names:
-            labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label).to_pylist()
+            labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label_schema).to_pylist()
 
             with open(os.path.join('features', label_name + '.pkl'), 'rb') as f:
                 features = pickle.load(f)
@@ -74,7 +74,7 @@ def main():
 
             
             main_split = femr.splits.PatientSplit.load_from_csv('pretraining_data/main_split.csv')
-            train_split = femr.splits.generate_hash_split(main_split.train_patient_ids, 17, frac_test=0.10)
+            train_split = femr.splits.generate_hash_split(main_split.train_patient_ids, 17, frac_test=0.20)
             
             train_mask = np.isin(labeled_features['patient_ids'], train_split.train_patient_ids)
             dev_mask = np.isin(labeled_features['patient_ids'], train_split.test_patient_ids)

@@ -27,7 +27,7 @@ class MIMICInpatientMortalityLabeler(femr.labelers.Labeler):
         death_times = set()
 
         for event in patient.events:
-            if event.code.startswith('MIMIC_IV_Admission/'):
+            if event.code.startswith('event_type//ADMISSION'):
                 admission_ranges.add((event.time, datetime.datetime.fromisoformat(event.end)))
 
             if event.code == meds.death_code:
@@ -63,11 +63,18 @@ class MIMICLongAdmissionLabeler(femr.labelers.Labeler):
         self.admission_length = admission_length
 
     def label(self, patient: meds_reader.Patient) -> List[meds.Label]:
-        admission_ranges = set()
+        admission_starts = dict()
+        admission_ends = dict()
 
         for event in patient.events:
-            if event.code.startswith('MIMIC_IV_Admission/'):
-                admission_ranges.add((event.time, datetime.datetime.fromisoformat(event.end)))
+            if event.code.startswith('HOSPITAL_ADMISSION'):
+                admission_starts[event.hadm_id] = event.time
+            if event.code.startswith('HOSPITAL_DISCHARGE'):
+                admission_ends[event.hadm_id] = event.time
+
+        assert admission_starts.keys() == admission_ends.keys(), f'{patient} {admission_starts.keys()} {admission_ends.keys()}'
+
+        admission_ranges = {(admission_starts[k], admission_ends[k]) for k in admission_starts.keys()}
 
         labels = []
         for (admission_start, admission_end) in admission_ranges:
@@ -92,12 +99,12 @@ def main():
         shutil.rmtree('labels')
     os.mkdir('labels')
 
-    with meds_reader.PatientDatabase(config.database_path, num_threads=6) as database:
+    with meds_reader.PatientDatabase(config.database_path, num_threads=config.num_threads) as database:
         for label_name in config.label_names:
             labeler = labelers[label_name]
             labels = labeler.apply(database)
 
-            label_frame = pa.Table.from_pylist(labels, meds.label)
+            label_frame = pa.Table.from_pylist(labels, meds.label_schema)
             pacsv.write_csv(label_frame, os.path.join('labels', label_name + '.csv'))
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ def main():
 
     with meds_reader.PatientDatabase(config.database_path, num_threads=32) as database:
         for label_name in config.label_names:
-            labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label).to_pylist()
+            labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label_schema).to_pylist()
 
             featurizer = femr.featurizers.FeaturizerList([
                 femr.featurizers.AgeFeaturizer(is_normalize=True),
