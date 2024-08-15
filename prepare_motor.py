@@ -12,12 +12,12 @@ import os
 def main():
     pretraining_data = pathlib.Path('pretraining_data')
 
+    ontology_path = pretraining_data / 'ontology.pkl'
+    if not ontology_path.exists():
+        print("Creating ontology")
+        ontology = femr.ontology.Ontology(config.athena_path, code_metadata_path=os.path.join(config.database_path, 'metadata', 'codes.parquet'))
 
-    with meds_reader.PatientDatabase(config.database_path, num_threads=32) as database:
-        ontology_path = pretraining_data / 'ontology.pkl'
-        if not ontology_path.exists():
-            print("Creating ontology")
-            ontology = femr.ontology.Ontology(config.athena_path, code_metadata_path=os.path.join(database.path_to_database, 'metadata', 'codes.parquet'))
+        with meds_reader.PatientDatabase(config.database_path, num_threads=2) as database:
             print("Pruning the ontology")
             ontology.prune_to_dataset(
                 database,
@@ -25,13 +25,13 @@ def main():
                 remove_ontologies={'SPL', 'HemOnc', 'LOINC'}
             )
 
-            with open(ontology_path, 'wb') as f:
-                pickle.dump(ontology, f)
-        else:
-            with open(ontology_path, 'rb') as f:
-                ontology = pickle.load(f)
+        with open(ontology_path, 'wb') as f:
+            pickle.dump(ontology, f)
+    else:
+        with open(ontology_path, 'rb') as f:
+            ontology = pickle.load(f)
 
-        
+    with meds_reader.PatientDatabase(config.database_path, num_threads=config.num_threads) as database:
         main_split = femr.splits.generate_hash_split(list(database), 97, frac_test=0.15)
         main_split.save_to_csv(pretraining_data / 'main_split.csv')
 

@@ -16,9 +16,9 @@ def main():
     if not os.path.exists('features'):
         os.mkdir('features')
 
-    with meds_reader.PatientDatabase(config.database_path, num_threads=32) as database:
+    with meds_reader.PatientDatabase(config.database_path, num_threads=config.num_threads) as database:
         for label_name in config.label_names:
-            labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label_schema).to_pylist()
+            labels = pd.read_parquet(os.path.join('labels', label_name + '.parquet'))
 
             featurizer = femr.featurizers.FeaturizerList([
                 femr.featurizers.AgeFeaturizer(is_normalize=True),

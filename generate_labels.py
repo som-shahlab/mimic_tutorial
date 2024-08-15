@@ -22,7 +22,7 @@ class MIMICInpatientMortalityLabeler(femr.labelers.Labeler):
     def __init__(self, time_after_admission: datetime.timedelta):
         self.time_after_admission = time_after_admission
 
-    def label(self, patient: meds_reader.Patient) -> List[meds.Label]:
+    def label(self, patient: meds_reader.Patient) -> List[femr.labelers.Label]:
         admission_ranges = set()
         death_times = set()
 
@@ -52,7 +52,7 @@ class MIMICInpatientMortalityLabeler(femr.labelers.Labeler):
                 continue
 
             is_death = death_time < admission_end
-            labels.append(meds.Label(patient_id=patient.patient_id, prediction_time=prediction_time, boolean_value=is_death))
+            labels.append(femr.labelers.Label(patient_id=patient.patient_id, prediction_time=prediction_time, boolean_value=is_death))
         
         return labels
 
@@ -62,7 +62,7 @@ class MIMICLongAdmissionLabeler(femr.labelers.Labeler):
         self.time_after_admission = time_after_admission
         self.admission_length = admission_length
 
-    def label(self, patient: meds_reader.Patient) -> List[meds.Label]:
+    def label(self, patient: meds_reader.Patient) -> List[femr.labelers.Label]:
         admission_starts = dict()
         admission_ends = dict()
 
@@ -84,7 +84,7 @@ class MIMICLongAdmissionLabeler(femr.labelers.Labeler):
 
             is_long_admission = (admission_end - admission_start) > self.admission_length
 
-            labels.append(meds.Label(patient_id=patient.patient_id, prediction_time=prediction_time, boolean_value=is_long_admission))
+            labels.append(femr.labelers.Label(patient_id=patient.patient_id, prediction_time=prediction_time, boolean_value=is_long_admission))
         
         return labels
     
@@ -104,8 +104,7 @@ def main():
             labeler = labelers[label_name]
             labels = labeler.apply(database)
 
-            label_frame = pa.Table.from_pylist(labels, meds.label_schema)
-            pacsv.write_csv(label_frame, os.path.join('labels', label_name + '.csv'))
+            labels.to_parquet(os.path.join('labels', label_name + '.parquet'), index=False)
 
 if __name__ == "__main__":
     main()
