@@ -10,7 +10,7 @@ import pathlib
 import torch
 
 def main():
-    with meds_reader.PatientDatabase(config.database_path, num_threads=6) as database:
+    with meds_reader.SubjectDatabase(config.database_path, num_threads=6) as database:
 
         pretraining_data = pathlib.Path('pretraining_data')
 

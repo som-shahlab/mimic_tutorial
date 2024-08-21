@@ -23,7 +23,7 @@ def main():
 
     os.mkdir('models')
 
-    with meds_reader.PatientDatabase("../mimic-iv-demo-meds-reader", num_threads=6) as database:
+    with meds_reader.SubjectDatabase("../mimic-iv-demo-meds-reader", num_threads=6) as database:
         for label_name in label_names:
             labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label).to_pylist()
 
@@ -32,10 +32,10 @@ def main():
         
             labeled_features = femr.featurizers.join_labels(features, labels)
 
-            main_split = femr.splits.PatientSplit.load_from_csv('pretraining_data/main_split.csv')
+            main_split = femr.splits.SubjectSplit.load_from_csv('pretraining_data/main_split.csv')
 
-            train_mask = np.isin(labeled_features['patient_ids'], main_split.train_patient_ids)
-            test_mask = np.isin(labeled_features['patient_ids'], main_split.test_patient_ids)
+            train_mask = np.isin(labeled_features['subject_ids'], main_split.train_subject_ids)
+            test_mask = np.isin(labeled_features['subject_ids'], main_split.test_subject_ids)
 
             def apply_mask(values, mask):
                 def apply(k, v):

@@ -8,16 +8,20 @@ import femr.models.tokenizer
 import femr.models.tasks
 import femr.models.processor
 import os
+import utils
+
+import polars as pl
 
 def main():
     pretraining_data = pathlib.Path('pretraining_data')
 
-    ontology_path = pretraining_data / 'ontology.pkl'
-    if not ontology_path.exists():
-        print("Creating ontology")
-        ontology = femr.ontology.Ontology(config.athena_path, code_metadata_path=os.path.join(config.database_path, 'metadata', 'codes.parquet'))
+    feature_ontology_path = pretraining_data / 'feature_ontology.pkl'
 
-        with meds_reader.PatientDatabase(config.database_path, num_threads=2) as database:
+    if not feature_ontology_path.exists():
+        print("Creating ontology")
+        ontology = utils.create_or_get_ontology()
+
+        with meds_reader.SubjectDatabase(config.database_path, num_threads=2) as database:
             print("Pruning the ontology")
             ontology.prune_to_dataset(
                 database,
@@ -25,21 +29,21 @@ def main():
                 remove_ontologies={'SPL', 'HemOnc', 'LOINC'}
             )
 
-        with open(ontology_path, 'wb') as f:
+        with open(feature_ontology_path, 'wb') as f:
             pickle.dump(ontology, f)
     else:
-        with open(ontology_path, 'rb') as f:
+        with open(feature_ontology_path, 'rb') as f:
             ontology = pickle.load(f)
 
-    with meds_reader.PatientDatabase(config.database_path, num_threads=config.num_threads) as database:
-        main_split = femr.splits.generate_hash_split(list(database), 97, frac_test=0.15)
-        main_split.save_to_csv(pretraining_data / 'main_split.csv')
+    splits = pl.read_parquet(os.path.join(config.database_path, 'metadata', 'subject_splits.parquet'))
+    train_subject_ids = list(splits.filter(pl.col('split') != 'held_out').select('subject_id').to_series())
 
-        train_split = femr.splits.generate_hash_split(main_split.train_patient_ids, 17, frac_test=0.05)
+    with meds_reader.SubjectDatabase(config.database_path, num_threads=config.num_threads) as database:
+        train_split = femr.splits.generate_hash_split(train_subject_ids, 17, frac_test=0.1)
 
-        main_database = database.filter(main_split.train_patient_ids)
-        train_database = main_database.filter(train_split.train_patient_ids)
-        val_database = main_database.filter(train_split.test_patient_ids)
+        main_database = database.filter(train_subject_ids)
+        train_database = main_database.filter(train_split.train_subject_ids)
+        val_database = main_database.filter(train_split.test_subject_ids)
 
         tokenizer_path = pretraining_data / 'tokenizer'
         if not tokenizer_path.exists():
@@ -72,12 +76,12 @@ def main():
 
         processor = femr.models.processor.FEMRBatchProcessor(tokenizer, motor_task)
 
-        example_patient_id = list(train_database)[0]
-        example_patient = train_database[example_patient_id]
+        example_subject_id = list(train_database)[0]
+        example_subject = train_database[example_subject_id]
 
-        # We can do this one patient at a time
-        print("Convert a single patient")
-        example_batch = processor.collate([processor.convert_patient(example_patient, tensor_type='pt')])
+        # We can do this one subject at a time
+        print("Convert a single subject")
+        example_batch = processor.collate([processor.convert_subject(example_subject, tensor_type='pt')])
 
         train_batches_path = pretraining_data / 'train_batches'
 

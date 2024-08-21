@@ -16,7 +16,7 @@ def main():
     if not os.path.exists('features'):
         os.mkdir('features')
 
-    with meds_reader.PatientDatabase(config.database_path, num_threads=config.num_threads) as database:
+    with meds_reader.SubjectDatabase(config.database_path, num_threads=config.num_threads) as database:
         for label_name in config.label_names:
             labels = pd.read_parquet(os.path.join('labels', label_name + '.parquet'))
 

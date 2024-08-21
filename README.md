@@ -85,7 +85,7 @@ Make sure to also install the correct gpu enabled version of PyTorch
 Step 4. Generating Splits and Preparing For Pretraining
 ------------------------
 
-This code uses a global patient split for correctness, with 85% for training and hyperparameter tuning and 15% for the test set.
+This code uses a global subject split for correctness, with 85% for training and hyperparameter tuning and 15% for the test set.
 
 We have a single script, prepare_motor that generates these splits and then training things like tokenizers to prepare for pretraining
 
@@ -96,7 +96,7 @@ python prepare_motor.py
 Step 5. Generate Labels
 ------------------------
 
-We use FEMR's built-in labeling tools to define two prediction tasks: long length of stay (7 days or more) and inpatient mortality. Both predictions are made 48 hours after admission.
+We use FEMR's built-in labeling tools to define two prediction tasks: long length of stay (7 days or more) and insubject mortality. Both predictions are made 48 hours after admission.
 
 ```bash
 python generate_labels.py
@@ -106,7 +106,7 @@ python generate_labels.py
 Step 6. Generate Tabular Features
 ------------------------
 
-We use FEMR's built-in labeling tools to define two prediction tasks: long length of stay (7 days or more) and inpatient mortality. Both predictions are made 48 hours after admission.
+We use FEMR's built-in labeling tools to define two prediction tasks: long length of stay (7 days or more) and insubject mortality. Both predictions are made 48 hours after admission.
 
 ```bash
 python generate_tabular_features.py
@@ -141,7 +141,7 @@ cp -r tmp_trainer_1e-4/checkpoint-68000 motor_model
 Step 9. Generate MOTOR Embedddings
 ------------------------
 
-We can then use MOTOR as an embedding model to obtain patient representations
+We can then use MOTOR as an embedding model to obtain subject representations
 
 ```bash
 python generate_motor_features.py
