@@ -63,6 +63,7 @@ def main():
         os.mkdir('results')
 
     for label_name in label_names:
+        print(label_name)
         labels = pd.read_parquet(os.path.join('labels', label_name + '.parquet'))
 
         with open(os.path.join('features', label_name + '.pkl'), 'rb') as f:

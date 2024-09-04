@@ -1,4 +1,4 @@
-label_names = ['long_los']
+label_names = ['mortality']
 
 database_path = "../meds_transform_test/MEDS_Extract_v0.0.7_test_reader"
 
