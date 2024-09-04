@@ -8,22 +8,25 @@ import pickle
 import meds
 import pathlib
 import torch
+import pandas as pd
 
 def main():
-    with meds_reader.SubjectDatabase(config.database_path, num_threads=6) as database:
+    with meds_reader.SubjectDatabase(config.database_path, num_threads=config.num_threads) as database:
 
         pretraining_data = pathlib.Path('pretraining_data')
 
-        ontology_path = pretraining_data / 'ontology.pkl'
+        ontology_path = pretraining_data / 'feature_ontology.pkl'
 
         with open(ontology_path, 'rb') as f:
             ontology = pickle.load(f)
 
         for label_name in config.label_names:
-            labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label).to_pylist()
+            labels = pd.read_parquet(os.path.join('labels', label_name + '.parquet'))
 
             features = femr.models.transformer.compute_features(
-                db=database, model_path='motor_model', labels=labels, ontology=ontology, device=torch.device('cuda'), tokens_per_batch = 32 * 1024, num_proc=6)
+                db=database, 
+                model_path='motor_model', labels=list(labels.itertuples()), ontology=ontology, device=torch.device('cuda'), tokens_per_batch = 32 * 1024, 
+                num_proc=config.num_threads)
 
             with open(os.path.join('features', label_name + '_motor.pkl'), 'wb') as f:
                 pickle.dump(features, f)

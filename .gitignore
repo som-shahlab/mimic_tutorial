@@ -1,4 +1,7 @@
 labels
+*.pkl
+predictions
+results
 cache_dir
 tmp_trainer*
 motor_model

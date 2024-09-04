@@ -11,8 +11,9 @@ import femr.models.processor
 def main():
     pretraining_data = pathlib.Path('pretraining_data')
 
-    ontology_path = pretraining_data / 'ontology.pkl'
-    with open(ontology_path, 'rb') as f:
+    feature_ontology_path = pretraining_data / 'feature_ontology.pkl'
+
+    with open(feature_ontology_path, 'rb') as f:
         ontology = pickle.load(f)
 
     tokenizer_path = pretraining_data / 'tokenizer'
@@ -75,7 +76,7 @@ def main():
         logging_steps=500,
         disable_tqdm=True,
 
-        evaluation_strategy='steps',
+        eval_strategy='steps',
         eval_steps=500,
 
         prediction_loss_only=True,

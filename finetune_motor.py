@@ -10,55 +10,77 @@ import femr.featurizers
 import pyarrow.csv as pacsv
 import meds
 import pickle
-from config import label_names
+from config import label_names, database_path
 import numpy as np
 import sklearn.linear_model
 import functools
 import femr.splits
+import polars as pl
+import json
 
 
 def main():
-    if os.path.exists('models'):
-        shutil.rmtree('models')
+    if not os.path.exists('results'):
+        os.mkdir('results')
 
-    os.mkdir('models')
+    if not os.path.exists('predictions'):
+        os.mkdir('predictions')
 
-    with meds_reader.SubjectDatabase("../mimic-iv-demo-meds-reader", num_threads=6) as database:
-        for label_name in label_names:
-            labels = pacsv.read_csv(os.path.join('labels', label_name + '.csv')).cast(meds.label).to_pylist()
+    for label_name in label_names:
+        labels = pd.read_parquet(os.path.join('labels', label_name + '.parquet'))
 
-            with open(os.path.join('features', label_name + '_motor.pkl'), 'rb') as f:
-                features = pickle.load(f)
+        if not os.path.exists('results/' + label_name):
+            os.mkdir('results/' + label_name)
+
+        if not os.path.exists('predictions/' + label_name):
+            os.mkdir('predictions/' + label_name)
+
+        with open(os.path.join('features', label_name + '_motor.pkl'), 'rb') as f:
+            features = pickle.load(f)
+    
+        labeled_features = femr.featurizers.join_labels(features, labels)
+
+        splits = pl.read_parquet(os.path.join(database_path, 'metadata', 'subject_splits.parquet'))
+        train_subject_ids = list(splits.filter(pl.col('split') != 'held_out').select('subject_id').to_series())
         
-            labeled_features = femr.featurizers.join_labels(features, labels)
+        train_mask = np.isin(labeled_features['subject_ids'], train_subject_ids)
+        held_out_mask = ~np.isin(labeled_features['subject_ids'], train_subject_ids)
+        def apply_mask(values, mask):
+            def apply(k, v):
+                if len(v.shape) == 1:
+                    return v[mask]
+                elif len(v.shape) == 2:
+                    return v[mask, :]
+                else:
+                    assert False, f"Cannot handle {k} {v.shape}"
 
-            main_split = femr.splits.SubjectSplit.load_from_csv('pretraining_data/main_split.csv')
+            return {k: apply(k, v) for k, v in values.items()}
+        
+        train_data = apply_mask(labeled_features, train_mask)
+        held_out_data = apply_mask(labeled_features, held_out_mask)
 
-            train_mask = np.isin(labeled_features['subject_ids'], main_split.train_subject_ids)
-            test_mask = np.isin(labeled_features['subject_ids'], main_split.test_subject_ids)
+        model = sklearn.linear_model.LogisticRegressionCV(scoring='roc_auc')
+        model.fit(train_data['features'], train_data['boolean_values'])
 
-            def apply_mask(values, mask):
-                def apply(k, v):
-                    if len(v.shape) == 1:
-                        return v[mask]
-                    elif len(v.shape) == 2:
-                        return v[mask, :]
-                    else:
-                        assert False, f"Cannot handle {k} {v.shape}"
+        y_pred = model.predict_log_proba(held_out_data['features'])[:, 1]
 
-                return {k: apply(k, v) for k, v in values.items()}
-            
-            train_data = apply_mask(labeled_features, train_mask)
-            test_data = apply_mask(labeled_features, test_mask)
+        final_auroc = sklearn.metrics.roc_auc_score(held_out_data['boolean_values'], y_pred)
 
-            model = sklearn.linear_model.LogisticRegressionCV(scoring='roc_auc')
-            model.fit(train_data['features'], train_data['boolean_values'])
+        with open(os.path.join('results', label_name, 'motor_logistic.json'), 'w') as f:
+            json.dump({'auroc': final_auroc}, f)
 
-            y_pred = model.predict_log_proba(test_data['features'])[:, 1]
+        predictions = model.predict_log_proba(labeled_features['features'])[:, 1]
 
-            final_auroc = sklearn.metrics.roc_auc_score(test_data['boolean_values'], y_pred)
+        data = pd.DataFrame.from_dict({
+            'boolean_prediction': predictions, 
+            'subject_id': labeled_features['subject_ids'], 
+            'prediction_time': labeled_features['times'],
+            'boolean_value': labeled_features['boolean_values'],
+        })
 
-            print(label_name, final_auroc)
+        data.to_parquet(os.path.join('predictions', label_name, 'motor_logistic.parquet'), index=False)
+
+        print(label_name, final_auroc)
 
 
 if __name__ == "__main__":

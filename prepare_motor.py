@@ -15,6 +15,9 @@ import polars as pl
 def main():
     pretraining_data = pathlib.Path('pretraining_data')
 
+    if not pretraining_data.exists():
+        pretraining_data.mkdir()
+
     feature_ontology_path = pretraining_data / 'feature_ontology.pkl'
 
     if not feature_ontology_path.exists():
@@ -88,7 +91,7 @@ def main():
         if not train_batches_path.exists():
             print("Convert batches")
             # But generally we want to convert entire datasets
-            train_batches = processor.convert_dataset(train_database, tokens_per_batch=16 * 1024, num_proc=32)
+            train_batches = processor.convert_dataset(train_database, tokens_per_batch=16 * 1024, num_proc=config.num_threads)
 
             print("Convert batches to pytorch")
             # Convert our batches to pytorch tensors
@@ -99,7 +102,7 @@ def main():
 
         if not val_batches_path.exists():
             print("Convert val batches")
-            val_batches = processor.convert_dataset(val_database, tokens_per_batch=16 * 1024, num_proc=32)
+            val_batches = processor.convert_dataset(val_database, tokens_per_batch=16 * 1024, num_proc=config.num_threads)
             # Convert our batches to pytorch tensors
             val_batches.set_format("pt")
             val_batches.save_to_disk(val_batches_path)
