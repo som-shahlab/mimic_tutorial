@@ -17,7 +17,7 @@ def main():
         ontology = pickle.load(f)
 
     tokenizer_path = pretraining_data / 'tokenizer'
-    tokenizer = femr.models.tokenizer.FEMRTokenizer.from_pretrained(tokenizer_path, ontology=ontology)
+    tokenizer = femr.models.tokenizer.HierarchicalTokenizer.from_pretrained(tokenizer_path, ontology=ontology)
 
 
     task_path = pretraining_data / 'motor_task.pkl'
@@ -39,7 +39,7 @@ def main():
 
     transformer_config = femr.models.config.FEMRTransformerConfig(
         vocab_size=tokenizer.vocab_size, 
-        is_hierarchical=tokenizer.is_hierarchical, 
+        is_hierarchical=True, 
         n_layers=6,
         use_normed_ages=True,
         use_bias=False,
@@ -84,6 +84,8 @@ def main():
 
         save_total_limit=1,
         load_best_model_at_end=True,
+
+        eval_on_start=True,
     )
 
     trainer = transformers.Trainer(

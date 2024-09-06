@@ -25,7 +25,7 @@ def main():
 
             features = femr.models.transformer.compute_features(
                 db=database, 
-                model_path='motor_model', labels=list(labels.itertuples()), ontology=ontology, device=torch.device('cuda'), tokens_per_batch = 32 * 1024, 
+                model_path='train_model/best', labels=list(labels.itertuples()), ontology=ontology, device=torch.device('cuda'), tokens_per_batch = 32 * 1024, 
                 num_proc=config.num_threads)
 
             with open(os.path.join('features', label_name + '_motor.pkl'), 'wb') as f:

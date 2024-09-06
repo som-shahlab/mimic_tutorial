@@ -1,3 +1,4 @@
+import femr.models.tokenizer
 import femr.ontology
 import pathlib
 import config
@@ -48,16 +49,26 @@ def main():
         train_database = main_database.filter(train_split.train_subject_ids)
         val_database = main_database.filter(train_split.test_subject_ids)
 
+
+        banned_properties = set()
+        for property in database.properties:
+            if property.endswith('_id'):
+                banned_properties.add(property)
+
+        banned_properties.add("emar_seq")
+
+        print("Banned", banned_properties)
+
         tokenizer_path = pretraining_data / 'tokenizer'
         if not tokenizer_path.exists():
             print("Train tokenizer")
-            tokenizer = femr.models.tokenizer.train_tokenizer(
-                main_database, vocab_size=1024 * 16, is_hierarchical=True, ontology=ontology)
+            tokenizer = femr.models.tokenizer.HierarchicalTokenizer.train(
+                main_database, vocab_size=1024 * 16, ontology=ontology, banned_properties=banned_properties, min_fraction=1/1000)
 
             # Save the tokenizer to the same directory as the model
             tokenizer.save_pretrained(tokenizer_path)
         else:
-            tokenizer = femr.models.tokenizer.FEMRTokenizer.from_pretrained(tokenizer_path, ontology=ontology)
+            tokenizer = femr.models.tokenizer.HierarchicalTokenizer.from_pretrained(tokenizer_path, ontology=ontology)
 
 
         task_path = pretraining_data / 'motor_task.pkl'

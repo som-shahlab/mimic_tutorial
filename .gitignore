@@ -9,3 +9,7 @@ features
 models
 pretraining_data
 __pycache__
+train_model*
+sure
+*model*
+!*.py
