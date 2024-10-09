@@ -99,7 +99,7 @@ def main():
         )
         scheduler = transformers.optimization.get_constant_schedule_with_warmup(optimizer, 500)
 
-    target_dir = 'train_model2'
+    target_dir = 'train_model4'
 
     os.mkdir(target_dir)
 

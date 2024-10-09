@@ -13,6 +13,8 @@ code_path = os.path.join(config.database_path, 'metadata', 'codes.parquet')
 
 code = pl.read_parquet(code_path)
 
+print(code)
+
 code_data = code.to_dicts()
 
 os.unlink(code_path)
@@ -21,6 +23,8 @@ with open('rxmap.pkl', 'rb') as f:
     rxmap = pickle.load(f)
 
 code_data_map = {c['code']: c for c in code_data}
+
+print(len(rxmap))
 
 for k, v in rxmap.items():
     if k not in code_data_map:

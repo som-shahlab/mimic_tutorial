@@ -58,12 +58,15 @@ def main():
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
 
+        optim="schedule_free_adamw",
+
         learning_rate=learning_rate,
         output_dir='tmp_trainer_' + sys.argv[1],
         remove_unused_columns=False,
         bf16=True,
 
         weight_decay=0.1,
+        adam_beta1=0.98,
         adam_beta2=0.95,
         
         report_to="tensorboard",
@@ -82,7 +85,7 @@ def main():
         prediction_loss_only=True,
         dataloader_num_workers=12,
 
-        save_total_limit=1,
+        save_total_limit=100,
         load_best_model_at_end=True,
 
         eval_on_start=True,

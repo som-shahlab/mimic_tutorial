@@ -78,7 +78,7 @@ def main():
             print("Train MOTOR task")
 
             motor_task = femr.models.tasks.MOTORTask.fit_pretraining_task_info(
-                main_database, tokenizer, num_tasks=8 * 1024, num_bins=8, final_layer_size=512)
+                main_database, tokenizer, num_tasks=16 * 1024, num_bins=8, final_layer_size=512)
             
             with open(task_path, 'wb') as f:
                 pickle.dump(motor_task, f)

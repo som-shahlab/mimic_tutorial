@@ -62,6 +62,10 @@ def main():
         model = sklearn.linear_model.LogisticRegressionCV(scoring='roc_auc')
         model.fit(train_data['features'], train_data['boolean_values'])
 
+        print("Fitting", sklearn.metrics.roc_auc_score(train_data['boolean_values'], model.predict_log_proba(train_data['features'])[:, 1]))
+
+        print(model.scores_)
+
         y_pred = model.predict_log_proba(held_out_data['features'])[:, 1]
 
         final_auroc = sklearn.metrics.roc_auc_score(held_out_data['boolean_values'], y_pred)
